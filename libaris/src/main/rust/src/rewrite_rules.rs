@@ -309,17 +309,17 @@ fn reduce_pattern(e: Expr, patterns: &Vec<(Expr, Expr)>) -> Expr {
             if let Some(ret) = ret {
                 // Collect all unification results and make sure we actually match exactly
                 let mut subs = HashMap::new();
-                let mut any_bad = false;
-                for subst in ret.0 {
-                    // We only want to unify our pattern variables. This prevents us from going backwards
-                    // and unifying a pattern variable in expr with some expression of our pattern variable
-                    if pattern_vars.contains(&subst.0) {
-                        // Sanity check: Only one unification per variable
-                        assert!(subs.insert(subst.0, subst.1).is_none());
-                    } else {
-                        any_bad = true;
-                    }
+
+                // We only want to unify our pattern variables. This prevents us from going backwards
+                // and unifying a pattern variable in expr with some expression of our pattern variable
+                let (good, bad): (Vec<_>, Vec<_>) = ret.0.iter().partition(|&subst| pattern_vars.contains(subst.0));
+
+                for subst in good {
+                    // Sanity check: Only one unification per variable
+                    assert!(subs.insert(subst.0, subst.1).is_none());
                 }
+
+                let any_bad = !bad.is_empty();
 
                 // Make sure we have a substitution for every variable in the pattern set (and only for them)
                 if !any_bad && subs.len() == pattern_vars.len() {
