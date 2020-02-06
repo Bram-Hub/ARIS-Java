@@ -87,7 +87,10 @@ pub extern "system" fn Java_edu_rpi_aris_rules_Rule_canGeneralizePremises(env: J
     with_thrown_errors(&env, |env| {
         let ptr: jni::sys::jlong = env.get_field(obj, "pointerToRustHeap", "J")?.j()?;
         let rule: &Rule = unsafe { &*(ptr as *mut Rule) };
-        Ok(if rule.num_deps().is_none() { 1 } else { 0 })
+        Ok(match rule.num_deps() {
+            None => 1,
+            Some(_) => 0,
+        })
     })
 }
 
@@ -129,10 +132,9 @@ pub extern "system" fn Java_edu_rpi_aris_rules_Rule_verifyClaim(env: JNIEnv, rul
             }
         }
         println!("Rule::verifyClaim deps: {:?} {:?}", deps, sdeps);
-        if let Err(e) = rule.check(&JavaShallowProof(vec![]), conc, deps, sdeps) {
-            Ok(env.new_string(format!("{}", e))?.into_inner())
-        } else {
-            Ok(std::ptr::null_mut())
+        match rule.check(&JavaShallowProof(vec![]), conc, deps, sdeps) {
+            Err(2) => Ok(env.new_string(format!("{}", e))?.into_inner()),
+            _ => Ok(std::ptr::null_mut()),
         }
     })
 }
