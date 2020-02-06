@@ -268,10 +268,9 @@ impl RuleT for PrepositionalInference {
         match self {
             Reit => {
                 let prem = p.lookup_expr_or_die(deps[0].clone())?;
-                if prem == conclusion {
-                    return Ok(());
-                } else {
-                    return Err(DoesNotOccur(conclusion, prem.clone()));
+                match prem {
+                    conclusion => Ok(()),
+                    _ => Err(DoesNotOccur(conclusion, prem.clone())),
                 }
             },
             AndIntro => {
@@ -296,25 +295,24 @@ impl RuleT for PrepositionalInference {
             },
             AndElim => {
                 let prem = p.lookup_expr_or_die(deps[0].clone())?;
-                if let Expr::AssocBinop { symbol: ASymbol::And, ref exprs } = prem {
-                    for e in exprs.iter() {
-                        if e == &conclusion {
-                            return Ok(());
+                match prem {
+                    Expr::AssocBinop { symbol: ASymbol::And, ref exprs } => {
+                        match exprs.iter().find(|x| x == &&conclusion) {
+                            Some(_) => Ok(()),
+                            // TODO: allow `A /\ B /\ C |- C /\ A /\ C`, etc
+                            _ => Err(DoesNotOccur(conclusion, prem.clone())),
                         }
-                    }
-                    // TODO: allow `A /\ B /\ C |- C /\ A /\ C`, etc
-                    return Err(DoesNotOccur(conclusion, prem.clone()));
-                } else {
-                    return Err(DepDoesNotExist(expression_builders::assocplaceholder(ASymbol::And), true));
+                    },
+                    _ => Err(DepDoesNotExist(expression_builders::assocplaceholder(ASymbol::And), true)),
                 }
             },
             OrIntro => {
                 let prem = p.lookup_expr_or_die(deps[0].clone())?;
                 if let Expr::AssocBinop { symbol: ASymbol::Or, ref exprs } = conclusion {
-                    if exprs.iter().find(|e| e == &&prem).is_none() {
-                        return Err(DoesNotOccur(prem, conclusion.clone()));
+                    match exprs.iter().find(|e| e == &&prem) {
+                        None => Err(DoesNotOccur(prem, conclusion.clone())),
+                        Some(_) => Ok(()),
                     }
-                    return Ok(());
                 } else {
                     return Err(ConclusionOfWrongForm(expression_builders::assocplaceholder(ASymbol::Or)));
                 }
@@ -361,23 +359,23 @@ impl RuleT for PrepositionalInference {
                 }
             },
             ImpElim => {
-                let prem1 =p.lookup_expr_or_die(deps[0].clone())?;
-                let prem2 =p.lookup_expr_or_die(deps[1].clone())?;
+                let prem1 = p.lookup_expr_or_die(deps[0].clone())?;
+                let prem2 = p.lookup_expr_or_die(deps[1].clone())?;
                 either_order(&prem1, &prem2, |i, j| {
-                    if let Expr::Binop{symbol: BSymbol::Implies, ref left, ref right} = i{
-                        //bad case, p -> q, a therefore --doesn't matter, nothing can be said
-                        //with a
+                    if let Expr::Binop {symbol: BSymbol::Implies, ref left, ref right} = i {
+                        // bad case, p -> q, a therefore --doesn't matter, nothing can be said
+                        // with a
                         if **left != *j {
                             return Err(DoesNotOccur(i.clone(), j.clone()));
                         }
 
                         //bad case, p -> q, p therefore a which does not follow
-                        if **right != conclusion{
+                        if **right != conclusion {
                             return Err(DoesNotOccur(conclusion.clone(), *right.clone()));
                         }
 
-                        //good case, p -> q, p therefore q
-                        if **left == *j && **right == conclusion{
+                        // good case, p -> q, p therefore q
+                        if **left == *j && **right == conclusion {
                             return Ok(Some(()));
                         }
                     }
@@ -408,10 +406,10 @@ impl RuleT for PrepositionalInference {
                 let prem = p.lookup_expr_or_die(deps[0].clone())?;
                 if let Expr::Unop{symbol: USymbol::Not, ref operand} = prem {
                     if let Expr::Unop{symbol: USymbol::Not, ref operand} = **operand {
-                        if **operand == conclusion {
-                            return Ok(());
+                        match **operand {
+                            conclusion => Ok(()),
+                            _ => Err(ConclusionOfWrongForm({use expression_builders::*; not(not(var("_"))) })),
                         }
-                        return Err(ConclusionOfWrongForm({use expression_builders::*; not(not(var("_"))) }));
                     } else {
                         return Err(DepDoesNotExist({use expression_builders::*; not(not(var("_"))) }, true));
                     }
@@ -429,7 +427,7 @@ impl RuleT for PrepositionalInference {
                                 return Ok(Some(()));
                             }
                         }
-                       Ok(None)
+                        Ok(None)
                     }, || Err(Other("Expected one dependency to be the negation of the other.".into())))
                 } else {
                     return Err(ConclusionOfWrongForm(Expr::Contradiction));
@@ -437,10 +435,9 @@ impl RuleT for PrepositionalInference {
             },
             ContradictionElim => {
                 let prem = p.lookup_expr_or_die(deps[0].clone())?;
-                if let Expr::Contradiction = prem {
-                    return Ok(());
-                } else {
-                    return Err(DepOfWrongForm(prem.clone(), Expr::Contradiction));
+                match prem {
+                    Expr::Contradiction => Ok(()),
+                    _ => Err(DepOfWrongForm(prem.clone(), Expr::Contradiction))
                 }
             },
             BiconditionalElim => {
@@ -601,23 +598,24 @@ impl RuleT for PredicateInference {
         use ProofCheckError::*; use PredicateInference::*;
         fn unifies_wrt_var<P: Proof>(e1: &Expr, e2: &Expr, var: &str) -> Result<Expr, ProofCheckError<P::Reference, P::SubproofReference>> {
             let constraints = vec![Constraint::Equal(e1.clone(), e2.clone())].into_iter().collect();
-            if let Some(substitutions) = unify(constraints) {
-                if substitutions.0.len() == 0 {
-                    assert_eq!(e1, e2);
-                    return Ok(expression_builders::var(var));
-                } else if substitutions.0.len() == 1 {
-                    if &substitutions.0[0].0 == var {
-                        assert_eq!(&subst(e1, &substitutions.0[0].0, substitutions.0[0].1.clone()), e2);
-                        return Ok(substitutions.0[0].1.clone());
-                    } else {
+
+            match unify(constraints) {
+                Some(substitutions) => match substitutions.0.len() {
+                    0 => {
+                        assert_eq!(e1, e2);
+                        Ok(expression_builders::var(var))
+                    },
+                    1 => match &substitutions.0[0].0 {
+                        var => {
+                            assert_eq!(&subst(e1, &substitutions.0[0].0, substitutions.0[0].1.clone()), e2);
+                            Ok(substitutions.0[0].1.clone())
+                        },
                         // TODO: standardize non-string error messages for unification-based rules
-                        return Err(Other(format!("Attempted to substitute for a variable other than the binder: {}", substitutions.0[0].0)));
-                    }
-                } else {
-                    return Err(Other(format!("More than one variable was substituted: {:?}", substitutions)));
-                }
-            } else {
-                return Err(Other(format!("No substitution found between {} and {}.", e1, e2)));
+                        _ => Err(Other(format!("Attempted to substitute for a variable other than the binder: {}", substitutions.0[0].0))),
+                    },
+                    _ => Err(Other(format!("More than one variable was substituted: {:?}", substitutions))),
+                },
+                _ => Err(Other(format!("No substitution found between {} and {}.", e1, e2))),
             }
         }
         fn generalizable_variable_counterexample<P: Proof>(sproof: &P, line: P::Reference, var: &str) -> Option<Expr> {
