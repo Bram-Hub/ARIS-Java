@@ -44,10 +44,13 @@ impl Proof for JavaShallowProof {
     fn remove_line(&mut self, _: Self::Reference) {}
     fn remove_subproof(&mut self, _: Self::SubproofReference) {}
     fn premises(&self) -> Vec<Self::Reference> {
-        if self.0.len() >= 1 { vec![self.0[0].clone()] } else { vec![] }
+        match self.0.is_empty() {
+            false => vec![self.0[0].clone()],
+            true => vec![],
+        }
     }
     fn lines(&self) -> Vec<Coprod!(Self::Reference, Self::SubproofReference)> {
-        (1..self.0.len()).map(|i| Coproduct::Inl(self.0[i].clone())).collect()
+        self.0.iter().skip(1).map(|x| Coproduct::Inl(x.clone())).collect()
     }
     fn parent_of_line(&self, _: &Coprod!(Self::Reference, Self::SubproofReference)) -> Option<Self::SubproofReference> { unimplemented!() }
     fn verify_line(&self, r: &Self::Reference) -> Result<(), ProofCheckError<Self::Reference, Self::SubproofReference>> {
