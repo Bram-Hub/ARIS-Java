@@ -21,7 +21,7 @@ pub extern "system" fn Java_edu_rpi_aris_ast_Expression_toString(env: JNIEnv, ob
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_edu_rpi_aris_ast_Expression_equals(env: JNIEnv, this: JObject, other: JObject) -> jni::sys::jboolean {
-    (|env| -> jni::errors::Result<_>{
+    (|env| -> jni::errors::Result<_> {
         let expr1 = jobject_to_expr(&env, this)?;
         let expr2 = jobject_to_expr(&env, other)?;
         Ok((expr1 == expr2) as _)
@@ -185,4 +185,3 @@ impl HasClass for Expr {
         }
     }
 }
-
