@@ -72,11 +72,11 @@ lazy_static! {
     ]);
 }
 
+
 fn for_each_truthtable<F>(n: usize, mut f: F) where F: FnMut(&[bool]) {
-    for x in 0..(2usize.pow(n as _)) {
-        let table: Vec<bool> = (0..n).map(|i| (x & (1 << i)) != 0).collect();
-        f(&table[..]);
-    }
+    (0..(2usize.pow(n as _))).map(|x|
+        (0..n).map(|i| (x & (1 << i)) != 0).as_slice()
+    ).for_each(|table| f(table));
 }
 
 #[test]
