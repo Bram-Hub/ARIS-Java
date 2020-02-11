@@ -87,7 +87,7 @@ pub extern "system" fn Java_edu_rpi_aris_rules_Rule_canGeneralizePremises(env: J
     with_thrown_errors(&env, |env| {
         let ptr: jni::sys::jlong = env.get_field(obj, "pointerToRustHeap", "J")?.j()?;
         let rule: &Rule = unsafe { &*(ptr as *mut Rule) };
-        Ok(rule.num_deps().map_or(1, |_| 0))
+        Ok(rule.num_deps().is_none() as _)
     })
 }
 
