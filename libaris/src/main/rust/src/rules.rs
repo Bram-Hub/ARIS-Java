@@ -268,9 +268,9 @@ impl RuleT for PrepositionalInference {
         match self {
             Reit => {
                 let prem = p.lookup_expr_or_die(deps[0].clone())?;
-                match prem {
-                    conclusion => Ok(()),
-                    _ => Err(DoesNotOccur(conclusion, prem.clone())),
+                match prem == conclusion {
+                    true => Ok(()),
+                    false => Err(DoesNotOccur(conclusion, prem.clone())),
                 }
             },
             AndIntro => {
@@ -406,9 +406,9 @@ impl RuleT for PrepositionalInference {
                 let prem = p.lookup_expr_or_die(deps[0].clone())?;
                 if let Expr::Unop{symbol: USymbol::Not, ref operand} = prem {
                     if let Expr::Unop{symbol: USymbol::Not, ref operand} = **operand {
-                        match **operand {
-                            conclusion => Ok(()),
-                            _ => Err(ConclusionOfWrongForm({use expression_builders::*; not(not(var("_"))) })),
+                        match **operand == conclusion {
+                            true => Ok(()),
+                            false => Err(ConclusionOfWrongForm({use expression_builders::*; not(not(var("_"))) })),
                         }
                     } else {
                         return Err(DepDoesNotExist({use expression_builders::*; not(not(var("_"))) }, true));
@@ -595,7 +595,8 @@ impl RuleT for PredicateInference {
         }
     }
     fn check<P: Proof>(self, p: &P, conclusion: Expr, deps: Vec<P::Reference>, sdeps: Vec<P::SubproofReference>) -> Result<(), ProofCheckError<P::Reference, P::SubproofReference>> {
-        use ProofCheckError::*; use PredicateInference::*;
+        use ProofCheckError::*;
+        use PredicateInference::*;
         fn unifies_wrt_var<P: Proof>(e1: &Expr, e2: &Expr, var: &str) -> Result<Expr, ProofCheckError<P::Reference, P::SubproofReference>> {
             let constraints = vec![Constraint::Equal(e1.clone(), e2.clone())].into_iter().collect();
 
@@ -605,13 +606,13 @@ impl RuleT for PredicateInference {
                         assert_eq!(e1, e2);
                         Ok(expression_builders::var(var))
                     },
-                    1 => match &substitutions.0[0].0 {
-                        var => {
+                    1 => match &substitutions.0[0].0 == var {
+                        true => {
                             assert_eq!(&subst(e1, &substitutions.0[0].0, substitutions.0[0].1.clone()), e2);
                             Ok(substitutions.0[0].1.clone())
                         },
                         // TODO: standardize non-string error messages for unification-based rules
-                        _ => Err(Other(format!("Attempted to substitute for a variable other than the binder: {}", substitutions.0[0].0))),
+                        false => Err(Other(format!("Attempted to substitute for a variable other than the binder: {}", substitutions.0[0].0))),
                     },
                     _ => Err(Other(format!("More than one variable was substituted: {:?}", substitutions))),
                 },
@@ -762,8 +763,8 @@ impl RuleT for Equivalence {
     fn num_deps(&self) -> Option<usize> { Some(1) } // all equivalence rules rewrite a single statement
     fn num_subdeps(&self) -> Option<usize> { Some(0) }
     fn check<P: Proof>(self, p: &P, conclusion: Expr, deps: Vec<P::Reference>, _sdeps: Vec<P::SubproofReference>) -> Result<(), ProofCheckError<P::Reference, P::SubproofReference>> {
-        use ProofCheckError::*; use Equivalence::*;
-
+        //use ProofCheckError::*;
+        use Equivalence::*;
 
         match self {
             DeMorgan => check_by_normalize_first_expr(p, deps, conclusion, false, |e| e.normalize_demorgans()),
@@ -805,7 +806,8 @@ impl RuleT for ConditionalEquivalence {
     fn num_deps(&self) -> Option<usize> { Some(1) } // all equivalence rules rewrite a single statement
     fn num_subdeps(&self) -> Option<usize> { Some(0) }
     fn check<P: Proof>(self, p: &P, conclusion: Expr, deps: Vec<P::Reference>, _sdeps: Vec<P::SubproofReference>) -> Result<(), ProofCheckError<P::Reference, P::SubproofReference>> {
-        use ProofCheckError::*; use ConditionalEquivalence::*;
+        //use ProofCheckError::*;
+        use ConditionalEquivalence::*;
         match self {
             Complement => check_by_rewrite_rule(p, deps, conclusion, false, &CONDITIONAL_COMPLEMENT_RULES),
             Identity => check_by_rewrite_rule(p, deps, conclusion, false, &CONDITIONAL_IDENTITY_RULES),

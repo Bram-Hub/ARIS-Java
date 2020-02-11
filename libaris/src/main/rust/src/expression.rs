@@ -245,7 +245,7 @@ impl Expr {
             Contradiction => false,
             Tautology => true,
             Var { name } => env[name],
-            Apply { func, args } => unimplemented!(), // TODO: do we want to pass a predicate environment too?
+            Apply { func: _, args: _ } => unimplemented!(), // TODO: do we want to pass a predicate environment too?
             Unop { symbol, operand } => {
                 use USymbol::*;
                 match symbol {

@@ -48,7 +48,7 @@ pub mod java_interop {
     }
 
     pub fn with_thrown_errors<A, F: FnOnce(&JNIEnv) -> jni::errors::Result<A> + UnwindSafe>(env: &JNIEnv, f: F) -> A {
-        use std::panic::{take_hook, set_hook, PanicInfo, Location};
+        use std::panic::{take_hook, set_hook, PanicInfo};
         let old_hook = take_hook();
         let (tx, rx) = std::sync::mpsc::channel::<String>();
         let mtx = std::sync::Mutex::new(tx);
