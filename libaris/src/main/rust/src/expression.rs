@@ -109,23 +109,30 @@ pub fn freevars(e: &Expr) -> HashSet<String> {
         Expr::Contradiction => (),
         Expr::Tautology => (),
         Expr::Var { name } => { r.insert(name.clone()); }
-        Expr::Apply { func, args } => { r.extend(freevars(func)); for s in args.iter().map(|x| freevars(x)) { r.extend(s); } },
+        Expr::Apply { func, args } => {
+            r.extend(freevars(func));
+            r.extend(args.iter().map(|x| freevars(x)).flatten());
+        },
         Expr::Unop { operand, .. } => { r.extend(freevars(operand)); },
-        Expr::Binop { left, right, .. } => { r.extend(freevars(left)); r.extend(freevars(right)); },
-        Expr::AssocBinop { exprs, .. } => { for expr in exprs.iter() { r.extend(freevars(expr)); } }
-        Expr::Quantifier { name, body, .. } => { r.extend(freevars(body)); r.remove(name); }
+        Expr::Binop { left, right, .. } => {
+            r.extend(freevars(left));
+            r.extend(freevars(right));
+        },
+        Expr::AssocBinop { exprs, .. } => {
+            r.extend(exprs.iter().map(|e| freevars(e)).flatten());
+        }
+        Expr::Quantifier { name, body, .. } => {
+            r.extend(freevars(body));
+            r.remove(name);
+        }
     }
     r
 }
 
 pub fn gensym(orig: &str, avoid: &HashSet<String>) -> String {
-    for i in 0u64.. {
-        let ret = format!("{}{}", orig, i);
-        if !avoid.contains(&ret[..]) {
-            return ret;
-        }
-    }
-    panic!("Somehow gensym used more than 2^{64} ids without finding anything?")
+    (0u64..).map(|i| format!("{}{}", orig, i))
+    .find(|ret| !avoid.contains(&ret[..]))
+    .expect("Somehow gensym used more than 2^{64} ids without finding anything?")
 }
 
 pub fn subst(e: &Expr, to_replace: &str, with: Expr) -> Expr {
@@ -452,17 +459,10 @@ impl Expr {
             match expr {
                 AssocBinop { symbol: symbol @ ASymbol::And, exprs } |
                 AssocBinop { symbol: symbol @ ASymbol::Or, exprs } => {
-
-                    let mut unifies = true;
                     // (0, 1), (1, 2), ... (n - 2, n - 1)
-                    for pair in exprs.windows(2) {
-                        // Just doing a basic AST equality. Could replace this with unify if we want
-                        // to be stronger
-                        if pair[0] != pair[1] {
-                            unifies = false;
-                            break;
-                        }
-                    }
+                    // Just doing a basic AST equality. Could replace this with unify if we want
+                    // to be stronger
+                    let unifies = exprs.windows(2).all(|pair| pair[0] == pair[1]);
 
                     if unifies {
                         // Just use the first one
@@ -526,4 +526,3 @@ pub mod expression_builders {
     pub fn forall(name: &str, body: Expr) -> Expr { Expr::Quantifier { symbol: QSymbol::Forall, name: name.into(), body: Box::new(body) } }
     pub fn exists(name: &str, body: Expr) -> Expr { Expr::Quantifier { symbol: QSymbol::Exists, name: name.into(), body: Box::new(body) } }
 }
-

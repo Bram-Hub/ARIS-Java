@@ -10,7 +10,12 @@ pub struct Line<P: Proof> {
 
 impl<P: Proof> Clone for Line<P> {
     fn clone(&self) -> Self {
-        Line { raw_expr: self.raw_expr.clone(), is_premise: self.is_premise, reference: self.reference.clone(), subreference: self.subreference.clone() }
+        Line {
+            raw_expr: self.raw_expr.clone(),
+            is_premise: self.is_premise,
+            reference: self.reference.clone(),
+            subreference: self.subreference.clone()
+        }
     }
 }
 
