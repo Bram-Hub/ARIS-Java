@@ -1,0 +1,3 @@
+[submodule "libaris/src/main/rust"]
+	path = libaris/src/main/rust
+	url = https://github.com/Bram-Hub/aris.git
