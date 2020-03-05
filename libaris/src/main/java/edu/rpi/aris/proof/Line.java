@@ -234,6 +234,7 @@ public class Line {
             if(proof.getNumLines() > 0) {
                 RustProof rp = RustProof.fromXml(xml);
                 if(rp != null) {
+                    System.out.printf("Deserialized rust proof: %s\n", rp.toString());
                     if (stopTimer)
                         stopTimer();
                     buildClaim();
