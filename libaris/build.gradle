@@ -34,20 +34,20 @@ test {
 task "rust-build" {
     doFirst {
         exec {
-            workingDir './src/main/rust'
-            commandLine 'cargo', 'build', '--release', '--features=java'
+            workingDir './src/main/rust/bindings/java'
+            commandLine 'cargo', 'build', '--release'
         }
         copy {
             into './src/main/resources'
-            from './src/main/rust/target/release/liblibaris.so'
+            from './src/main/rust/target/release/libaris_java.so'
         }
         copy {
             into './src/main/resources'
-            from './src/main/rust/target/release/libaris.dll'
+            from './src/main/rust/target/release/aris_java.dll'
         }
         copy {
             into './src/main/resources'
-            from './src/main/rust/target/release/liblibaris.dylib'
+            from './src/main/rust/target/release/libaris_java.dylib'
         }
     }
 }
